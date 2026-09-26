@@ -1,5 +1,5 @@
 // Everything that talks to the backend lives here.
-const base = "/api";
+const base = "https://digitaltwin-ai-backend.onrender.com/api";
 
 // The signed-in session token. Protected endpoints check it server-side, so
 // what a role can see is enforced by the backend, not just hidden in the UI.
@@ -72,8 +72,9 @@ export function connect(onData, onStatus) {
   let ws = null, dead = false, timer = null;
   const open = () => {
     if (dead) return;
-    const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    ws = new WebSocket(`${proto}//${location.host}/ws`);
+    const wsHost = "digitaltwin-ai-backend.onrender.com";
+    const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
+    ws = new WebSocket(`${wsProto}//${wsHost}/ws`);
     ws.onopen = () => onStatus?.("live");
     ws.onmessage = (e) => onData(JSON.parse(e.data));
     ws.onclose = () => { onStatus?.("down"); if (!dead) timer = setTimeout(open, 1500); };
