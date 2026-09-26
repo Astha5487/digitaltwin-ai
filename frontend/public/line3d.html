@@ -1,0 +1,1395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>DIGITALTWIN.AI - Line 3D View</title>
+<style>
+:root {
+  /* ==========================================================
+     DIGITALTWIN.AI — LIGHT INDUSTRIAL / ENGINEERING PALETTE
+     ========================================================== */
+
+  --bg: #E8EEF1;
+  --panel: #F7F8F6;
+  --card: #FFFFFF;
+  --card-2: #E7ECEF;
+
+  --steel: #6F6C64;
+
+  /* DIGITALTWIN technical blue */
+  --amber: #2F73B7;
+
+  --text: #292B25;
+  --muted: #59646B;
+  --muted-2: #7C878D;
+
+  /* Status colours */
+  --healthy: #91A83F;
+  --warning: #D49A45;
+  --critical: #C45B58;
+
+  --border: #B9C5CB;
+
+  /* Engineering/grid colours */
+  --grid: #9BAEB8;
+  --blue-deep: #1C5686;
+
+  --light-gray: #E4E3DE;
+  --black-olive: #292B25;
+
+  /* Light technical surfaces */
+  --surface-blue: #D8E3E9;
+  --surface-steel: #C7D1D6;
+  --surface-dark: #53636D;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #E8EEF1;
+    --panel: #F7F8F6;
+    --card: #FFFFFF;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #E8EEF1;
+  --panel: #F7F8F6;
+  --card: #FFFFFF;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    "Barlow",
+    "Segoe UI",
+    Calibri,
+    Arial,
+    sans-serif;
+
+  overflow: hidden;
+
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+canvas.dragging {
+  cursor: grabbing;
+}
+
+.ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ui > * {
+  pointer-events: auto;
+}
+
+/* ==========================================================
+   TOP BAR
+   ========================================================== */
+
+.topbar {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: 16px;
+  right: 16px;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.brand h1 {
+  margin: 0;
+
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+
+  color: var(--black-olive);
+}
+
+.brand h1 span {
+  color: var(--amber);
+}
+
+.brand p {
+  margin: 4px 0 0;
+
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* ==========================================================
+   STATS
+   ========================================================== */
+
+.stats {
+  display: flex;
+  gap: 0;
+
+  background: rgba(255,255,255,0.88);
+
+  border: 1px solid var(--border);
+  border-radius: 5px;
+
+  padding: 7px 5px;
+
+  box-shadow:
+    0 8px 24px rgba(38, 53, 62, 0.10);
+
+  backdrop-filter: blur(8px);
+}
+
+.stat {
+  padding: 4px 13px;
+
+  text-align: center;
+  min-width: 68px;
+
+  border-right: 1px solid #D5DDE1;
+}
+
+.stat:last-child {
+  border-right: none;
+}
+
+.stat .v {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--black-olive);
+}
+
+.stat .k {
+  font-size: 9px;
+  color: var(--muted-2);
+
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  margin-top: 2px;
+}
+
+/* ==========================================================
+   LEGEND
+   ========================================================== */
+
+.legend {
+  position: absolute;
+
+  left: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+
+  background: rgba(255,255,255,0.90);
+
+  border: 1px solid var(--border);
+  border-radius: 5px;
+
+  padding: 10px 14px;
+
+  font-size: 11px;
+  color: var(--muted);
+
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+
+  max-width: 60vw;
+
+  box-shadow:
+    0 8px 24px rgba(38, 53, 62, 0.10);
+
+  backdrop-filter: blur(8px);
+}
+
+.legend .li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+
+  flex: none;
+}
+
+/* ==========================================================
+   HINT
+   ========================================================== */
+
+.hint {
+  position: absolute;
+
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+
+  font-size: 11px;
+  color: var(--muted);
+
+  background: rgba(255,255,255,0.88);
+
+  border: 1px solid var(--border);
+  border-radius: 5px;
+
+  padding: 8px 12px;
+
+  transition: opacity 0.6s ease;
+
+  box-shadow:
+    0 8px 24px rgba(38, 53, 62, 0.10);
+}
+
+/* ==========================================================
+   TOOLTIP
+   ========================================================== */
+
+.tip {
+  position: absolute;
+
+  transform: translate(-50%, -100%);
+
+  pointer-events: none;
+
+  background: rgba(255,255,255,0.97);
+
+  border: 1px solid var(--border);
+  border-radius: 5px;
+
+  padding: 9px 12px;
+
+  font-size: 11.5px;
+  min-width: 168px;
+
+  opacity: 0;
+
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+
+  color: var(--text);
+
+  box-shadow:
+    0 14px 35px rgba(38, 53, 62, 0.16);
+}
+
+.tip.show {
+  opacity: 1;
+}
+
+.tip .name {
+  font-weight: 700;
+  font-size: 12.5px;
+
+  margin-bottom: 2px;
+
+  color: var(--black-olive);
+}
+
+.tip .sub {
+  color: var(--muted);
+  font-size: 10.5px;
+
+  margin-bottom: 6px;
+}
+
+.tip .row {
+  display: flex;
+  justify-content: space-between;
+
+  gap: 10px;
+  padding: 1px 0;
+}
+
+.tip .row b {
+  color: var(--amber);
+  font-weight: 700;
+}
+
+.tip .row span:first-child {
+  color: var(--muted);
+}
+
+/* ==========================================================
+   SIDE PANEL
+   ========================================================== */
+
+.panel {
+  position: absolute;
+
+  top: 0;
+  right: 0;
+
+  height: 100%;
+
+  width: min(360px, 88vw);
+
+  background: rgba(247,248,246,0.98);
+
+  border-left: 1px solid var(--border);
+
+  padding:
+    calc(20px + env(safe-area-inset-top,0px))
+    20px
+    20px;
+
+  transform: translateX(105%);
+
+  transition:
+    transform 0.32s cubic-bezier(0.22,1,0.36,1);
+
+  overflow-y: auto;
+
+  box-shadow:
+    -15px 0 40px rgba(38,53,62,0.10);
+}
+
+.panel.open {
+  transform: translateX(0);
+}
+
+.panel .close {
+  position: absolute;
+
+  top: calc(14px + env(safe-area-inset-top,0px));
+  right: 14px;
+
+  width: 30px;
+  height: 30px;
+
+  border-radius: 4px;
+
+  border: 1px solid var(--border);
+
+  background: var(--card);
+
+  color: var(--text);
+
+  font-size: 15px;
+
+  cursor: pointer;
+  line-height: 1;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.panel .close:hover {
+  background: var(--card-2);
+  border-color: var(--amber);
+}
+
+.panel .badge {
+  display: inline-block;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 0.03em;
+
+  padding: 4px 9px;
+
+  border-radius: 3px;
+
+  margin-bottom: 10px;
+
+  text-transform: uppercase;
+}
+
+.panel h2 {
+  margin: 0 0 2px;
+
+  font-size: 20px;
+
+  color: var(--black-olive);
+}
+
+.panel .sub {
+  color: var(--muted);
+
+  font-size: 12.5px;
+
+  margin-bottom: 16px;
+}
+
+.panel .note {
+  font-size: 12px;
+
+  color: var(--muted);
+
+  background: #EEF2F3;
+
+  border: 1px solid var(--border);
+
+  border-radius: 4px;
+
+  padding: 10px 12px;
+
+  margin-bottom: 18px;
+
+  line-height: 1.45;
+}
+
+.metric-grid {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 10px;
+
+  margin-bottom: 6px;
+}
+
+.metric {
+  background: #FFFFFF;
+
+  border: 1px solid var(--border);
+
+  border-radius: 4px;
+
+  padding: 12px 14px;
+
+  box-shadow:
+    0 3px 12px rgba(38,53,62,0.05);
+}
+
+.metric .k {
+  font-size: 9.5px;
+
+  color: var(--muted-2);
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.04em;
+}
+
+.metric .v {
+  font-size: 21px;
+
+  font-weight: 700;
+
+  margin-top: 4px;
+
+  color: var(--amber);
+}
+
+.metric .u {
+  font-size: 11px;
+
+  color: var(--muted);
+
+  margin-left: 3px;
+
+  font-weight: 500;
+}
+
+.metric .bar {
+  height: 4px;
+
+  border-radius: 1px;
+
+  background: #D9E0E3;
+
+  margin-top: 9px;
+
+  overflow: hidden;
+}
+
+.metric .bar i {
+  display: block;
+
+  height: 100%;
+
+  background: var(--amber);
+
+  border-radius: 1px;
+}
+
+.panel .section-label {
+  font-size: 10.5px;
+
+  color: var(--muted-2);
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.04em;
+
+  margin: 20px 0 8px;
+}
+
+/* ==========================================================
+   LIGHT TECHNICAL OVERLAY
+   ========================================================== */
+
+body::before {
+  content: "";
+
+  position: fixed;
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(47,115,183,0.035) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      0deg,
+      rgba(47,115,183,0.035) 1px,
+      transparent 1px
+    );
+
+  background-size: 48px 48px;
+
+  z-index: 1;
+}
+
+body::after {
+  content: "";
+
+  position: fixed;
+  inset: 0;
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      700px circle at 50% 42%,
+      rgba(255,255,255,0.42),
+      transparent 72%
+    );
+
+  z-index: 1;
+}
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+
+@media (max-width: 640px) {
+
+  .stats {
+    display: none;
+  }
+
+  .legend {
+    max-width: 92vw;
+  }
+
+  .brand h1 {
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="c"></canvas></div>
+
+<div class="ui">
+  <div class="topbar">
+    <div class="brand">
+      <h1>DIGITALTWIN<span>.AI</span> — Line 3D View</h1>
+      <p>Final Assembly Line · Body Shop → Paint Shop → Final Assembly → Quality Check</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="legend">
+    <div class="li"><span class="dot" style="background:var(--healthy)"></span>Healthy</div>
+    <div class="li"><span class="dot" style="background:var(--warning)"></span>Watch</div>
+    <div class="li"><span class="dot" style="background:var(--critical)"></span>Bottleneck</div>
+    <div class="li"><span class="dot" style="background:var(--amber);opacity:0.55"></span>Ring = automation tier</div>
+    <div class="li"><span style="width:13px;height:13px;border:1.5px dashed var(--critical);border-radius:50%;display:inline-block"></span>Dashed ring = risk inherited from upstream</div>
+  </div>
+
+  <div class="hint" id="hint">Drag to rotate · Scroll to zoom · Hover or tap a station</div>
+
+  <div class="tip" id="tip"></div>
+
+  <div class="panel" id="panel">
+    <button class="close" id="panelClose">✕</button>
+    <div id="panelBody"></div>
+  </div>
+</div>
+
+<script type="module">
+  import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js";
+
+  window.THREE = THREE;
+
+  // Your existing Three.js code will run after this.
+</script>
+<script>
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------- station data
+  const STATION_X = [-10, -3.4, 3.4, 10];
+  const STATIONS = [
+    {
+      id: "body", x: STATION_X[0], name: "Station 1 — Body Shop", sub: "Robotic Welding", stage: "frame",
+      icon: "W", automation: "L3 · Highly Automated", status: "healthy",
+      speed: 62, cost: 1850, downtime: 2.1, defect: 1.4,
+      note: "Fully instrumented. Weld current, force and position all logged in real time — this station rarely surprises the twin."
+    },
+    {
+      id: "paint", x: STATION_X[1], name: "Station 2 — Paint Shop", sub: "Spray & Cure Booth", stage: "primer",
+      icon: "P", automation: "L2 · Semi-Automated", status: "warning",
+      speed: 58, cost: 2240, downtime: 4.8, defect: 2.6,
+      note: "Coating thickness drifts with booth humidity. Downtime is creeping up — worth a maintenance-window check before it becomes the bottleneck."
+    },
+    {
+      id: "torque", x: STATION_X[2], name: "Station 3 — Final Assembly", sub: "Torque & Fastening", stage: "assembly",
+      icon: "T", automation: "L1 · Operator-Assisted", status: "critical",
+      speed: 53, cost: 1390, downtime: 7.6, defect: 3.1,
+      note: "Current bottleneck: 68s cycle time against a 55s takt target. Operator load is at 92% — the twin flags this as the line's limiting station."
+    },
+    {
+      id: "qc", x: STATION_X[3], name: "Station 4 — Quality Check", sub: "Vision + Manual Inspection", stage: "finished",
+      icon: "Q", automation: "L2 · Semi-Automated", status: "healthy",
+      speed: 60, cost: 410, downtime: 1.5, defect: 0.6,
+      note: "Vision system confirms most units; manual inspection only kicks in on flagged edge cases. Lowest downtime on the line."
+    },
+  ];
+const STATUS_COLOR = {
+  healthy: 0xB7C34A,
+  warning: 0xD4A24C,
+  critical: 0xC85B5B
+};
+
+const STATUS_HEX = {
+  healthy: "#B7C34A",
+  warning: "#D4A24C",
+  critical: "#C85B5B"
+};
+
+/* Technical blue = primary DIGITALTWIN.AI accent */
+const AMBER = 0x4B91D1;
+
+/* Neutral industrial steel */
+const STEEL = 0x6F6C64;
+
+  // ---------------------------------------------------- upstream risk propagation
+  // A station's own dot/ring always reflects its OWN equipment health — don't fake
+  // that. But a defect or slowdown upstream still flows downstream: a perfectly
+  // healthy station can be inspecting/handling units already compromised by an
+  // earlier one. So every station also carries `upstreamRisk` = the worst status
+  // seen in any station BEFORE it on the line, and `upstreamFlag` = true only when
+  // that inherited risk is actually worse than what the station's own dot shows —
+  // i.e. exactly the case where looking at the lamp alone would understate reality.
+  const SEV = { healthy: 0, warning: 1, critical: 2 };
+  const shortName = (n) => n.split(" — ")[0];
+  (function propagate() {
+    let worst = "healthy", worstName = null;
+    STATIONS.forEach((st) => {
+      st.upstreamRisk = worst;
+      st.upstreamSource = worstName;
+      st.upstreamFlag = SEV[worst] > SEV[st.status];
+      if (SEV[st.status] >= SEV[worst]) { worst = st.status; worstName = st.name; }
+    });
+  })();
+
+  const metricRange = (key) => {
+    const vals = STATIONS.map((s) => s[key]);
+    return { min: Math.min(...vals), max: Math.max(...vals) };
+  };
+  const pct = (v, key, invert) => {
+    const { min, max } = metricRange(key);
+    if (max === min) return 50;
+    let p = ((v - min) / (max - min)) * 100;
+    return invert ? 100 - p : p;
+  };
+
+  // ---------------------------------------------------------------- top stats
+  const bottleneckSpeed = Math.min(...STATIONS.map((s) => s.speed));
+  const blendedCost = STATIONS.reduce((a, s) => a + s.cost, 0);
+  const weeklyHours = 144;
+  const downtimeHours = STATIONS.reduce((a, s) => a + (weeklyHours * s.downtime) / 100, 0);
+  const bottleneckStation = STATIONS.find((s) => s.status === "critical");
+  document.getElementById("stats").innerHTML = [
+    [bottleneckSpeed, "Units/hr"],
+    ["₹" + blendedCost.toLocaleString("en-IN"), "Cost / unit"],
+    [downtimeHours.toFixed(1) + "h", "Downtime / wk"],
+    [bottleneckStation ? shortName(bottleneckStation.name).replace("Station ", "St. ") : "None", "Bottleneck"],
+  ].map(([v, k]) => '<div class="stat"><div class="v">' + v + '</div><div class="k">' + k + '</div></div>').join("");
+
+  // ---------------------------------------------------------------------- 3D
+  const canvas = document.getElementById("c");
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x0E1B28, 30, 68);
+
+  const camera = new THREE.PerspectiveCamera(44, 1, 0.1, 220);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+  const key = new THREE.DirectionalLight(0xffffff, 1.05);
+  key.position.set(10, 16, 12);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(AMBER, 0.5);
+  rim.position.set(-10, 8, -10);
+  scene.add(rim);
+
+  const world = new THREE.Group();
+  scene.add(world);
+
+const floor = new THREE.Mesh(
+  new THREE.BoxGeometry(32, 0.4, 13),
+  new THREE.MeshStandardMaterial({
+    color: 0x0B1723,
+    roughness: 0.92,
+    metalness: 0.08
+  })
+);
+  floor.position.y = -0.4;
+  world.add(floor);
+  const grid = new THREE.GridHelper(
+  36,
+  26,
+  0x35506A,
+  0x29445B
+);
+  grid.position.y = -0.19;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.24;
+  world.add(grid);
+
+const conveyor = new THREE.Mesh(
+  new THREE.BoxGeometry(25, 0.22, 1.9),
+  new THREE.MeshStandardMaterial({
+    color: 0x162A3B,
+    emissive: 0x08131E,
+    roughness: 0.78,
+    metalness: 0.35
+  })
+);
+  conveyor.position.y = 0.11;
+  world.add(conveyor);
+
+  for (let i = 0; i < STATION_X.length - 1; i++) {
+    const arrow = new THREE.Mesh(
+      new THREE.ConeGeometry(0.13, 0.32, 8),
+      new THREE.MeshBasicMaterial({
+      color: 0x4B91D1
+})
+    );
+    arrow.rotation.z = -Math.PI / 2;
+    arrow.position.set((STATION_X[i] + STATION_X[i + 1]) / 2, 0.34, 0);
+    world.add(arrow);
+  }
+
+  // ---------------------------------------------------------------- builders
+  function makeIconTexture(letter, color) {
+    const cv = document.createElement("canvas");
+    cv.width = 128; cv.height = 128;
+    const ctx = cv.getContext("2d");
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.beginPath(); ctx.arc(64, 64, 58, 0, Math.PI * 2);
+    ctx.fillStyle = "#142536ee"; ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = color; ctx.stroke();
+    ctx.fillStyle = color; ctx.font = "bold 58px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(letter, 64, 70);
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function makeLabelTexture(name, sub) {
+    const cv = document.createElement("canvas");
+    cv.width = 512; cv.height = 96;
+    const ctx = cv.getContext("2d");
+    ctx.clearRect(0, 0, 512, 96);
+    ctx.font = "bold 34px Arial"; ctx.fillStyle = "#F1EFE7"; ctx.textAlign = "center";
+    ctx.fillText(name.replace("Station ", "St. "), 256, 40);
+    ctx.font = "22px Arial"; ctx.fillStyle = "#A6A6A2";
+    ctx.fillText(sub, 256, 74);
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function makeFlagTexture(color) {
+    const cv = document.createElement("canvas");
+    cv.width = 96; cv.height = 96;
+    const ctx = cv.getContext("2d");
+    ctx.clearRect(0, 0, 96, 96);
+    ctx.beginPath();
+    ctx.moveTo(48, 8); ctx.lineTo(90, 84); ctx.lineTo(6, 84); ctx.closePath();
+    ctx.fillStyle = "#142536"; ctx.fill();
+    ctx.lineWidth = 5; ctx.strokeStyle = color; ctx.stroke();
+    ctx.fillStyle = color; ctx.font = "bold 42px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("!", 48, 58);
+    return new THREE.CanvasTexture(cv);
+  }
+
+  function makeDashedRing(radius, color) {
+    const pts = [];
+    const segs = 72;
+    for (let i = 0; i <= segs; i++) {
+      const a = (i / segs) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineDashedMaterial({ color, dashSize: 0.22, gapSize: 0.16, transparent: true, opacity: 0.7, linewidth: 1 });
+    const line = new THREE.LineLoop(geo, mat);
+    line.computeLineDistances();
+    return line;
+  }
+
+  function makeHeatmapTexture() {
+    const cv = document.createElement("canvas");
+    cv.width = 220; cv.height = 160;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle = "#120b18"; ctx.fillRect(0, 0, 220, 160);
+    const grad = ctx.createRadialGradient(110, 78, 4, 110, 78, 78);
+    grad.addColorStop(0, "#c24c72");
+    grad.addColorStop(0.45, "#d8935e");
+    grad.addColorStop(0.8, "#9cae6e");
+    grad.addColorStop(1, "#120b18");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(110, 78, 78, 0, Math.PI * 2); ctx.fill();
+    return new THREE.CanvasTexture(cv);
+  }
+  const heatmapTex = makeHeatmapTexture();
+
+  // A small stylised car, built from boxes. `stage` controls completeness/finish.
+  function buildCar(stage) {
+    const g = new THREE.Group();
+  const bodyColor =
+  stage === "frame" ? 0x687783 :
+  stage === "primer" ? 0x718797 :
+  stage === "assembly" ? 0x9BA7AF :
+  0xD5D9D6;
+    const mat = new THREE.MeshStandardMaterial({
+      color: bodyColor, metalness: stage === "frame" ? 0.75 : 0.35, roughness: stage === "finished" ? 0.28 : 0.7,
+      wireframe: stage === "frame",
+    });
+
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.55, 3.0), mat);
+    cabin.position.y = 0.85; g.add(cabin);
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.4, 1.0), mat);
+    hood.position.set(0, 0.62, 1.85); g.add(hood);
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.4, 0.85), mat);
+    trunk.position.set(0, 0.62, -1.78); g.add(trunk);
+    const lower = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.45, 3.5), mat);
+    lower.position.y = 0.42; g.add(lower);
+
+    if (stage === "assembly" || stage === "finished") {
+      const glass = new THREE.Mesh(
+        new THREE.BoxGeometry(1.28, 0.4, 2.4),
+        new THREE.MeshStandardMaterial({ color: 0x0A1825, metalness: 0.2, roughness: 0.15, transparent: true, opacity: 0.85 })
+      );
+      glass.position.y = 1.02; g.add(glass);
+    }
+
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x170f1a, roughness: 0.6 });
+    const wheelSpots = [[-0.85, 1.1], [0.85, 1.1], [-0.85, -1.1], [0.85, -1.1]];
+    let looseWheel = null;
+    if (stage === "finished") {
+      wheelSpots.forEach(([wx, wz]) => {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.26, 16), wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(wx, 0.34, wz);
+        g.add(wheel);
+      });
+    } else if (stage === "assembly") {
+      wheelSpots.slice(0, 3).forEach(([wx, wz]) => {
+        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.26, 16), wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(wx, 0.34, wz);
+        g.add(wheel);
+      });
+      looseWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.26, 16), wheelMat);
+      looseWheel.rotation.z = Math.PI / 2;
+      looseWheel.position.set(0.85, 1.55, -1.1);
+      g.add(looseWheel);
+      // open hood, tilted, revealing a small engine block
+      hood.rotation.x = -0.55;
+      hood.position.set(0, 0.95, 2.15);
+      const engine = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 0.3, 0.6),
+        new THREE.MeshStandardMaterial({ color: 0x3a2440, metalness: 0.5, roughness: 0.4 })
+      );
+      engine.position.set(0, 0.6, 1.75);
+      g.add(engine);
+    } else {
+      const skid = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.12, 3.7), new THREE.MeshStandardMaterial({ color: 0x2a1830 }));
+      skid.position.y = 0.06; g.add(skid);
+    }
+
+    return { group: g, looseWheel };
+  }
+
+  function buildArm(color) {
+    const g = new THREE.Group();
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.2, 0.28, 12),
+      new THREE.MeshStandardMaterial({ color: 0x2a1830, metalness: 0.5, roughness: 0.5 })
+    );
+    base.position.y = 0.14; g.add(base);
+    const pivot = new THREE.Group();
+    pivot.position.y = 0.28; g.add(pivot);
+    const arm = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.9, 0.14),
+      new THREE.MeshStandardMaterial({ color, metalness: 0.55, roughness: 0.35 })
+    );
+    arm.position.y = 0.45; pivot.add(arm);
+    const tip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 10, 10),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: color, emissiveIntensity: 0.7 })
+    );
+    tip.position.y = 0.9; pivot.add(tip);
+    return { group: g, pivot, tip };
+  }
+
+  function buildPerson(color) {
+    const g = new THREE.Group();
+    const limbMat = new THREE.MeshStandardMaterial({ color: 0x15101c });
+    const skin = new THREE.MeshStandardMaterial({ color });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.17, 0.5, 10), skin);
+    body.position.y = 0.55; g.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), skin);
+    head.position.y = 0.92; g.add(head);
+    const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.48, 8), limbMat);
+    legL.position.set(-0.07, 0.13, 0); g.add(legL);
+    const legR = legL.clone(); legR.position.x = 0.07; g.add(legR);
+    const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.4, 8), skin);
+    armL.position.set(-0.2, 0.55, 0.08); armL.rotation.z = 0.35; g.add(armL);
+    const armR = armL.clone(); armR.position.x = 0.2; armR.rotation.z = -0.35; g.add(armR);
+    return g;
+  }
+
+  // ------------------------------------------------------------ station rigs
+  const stationMeshes = [];
+  const AUTO_RING = { "L3 · Highly Automated": 1, "L2 · Semi-Automated": 0.6, "L1 · Operator-Assisted": 0.32 };
+
+  STATIONS.forEach((st) => {
+    const g = new THREE.Group();
+    g.position.x = st.x;
+    world.add(g);
+
+    const platform = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.15, 2.3, 0.28, 28),
+      new THREE.MeshStandardMaterial({ color: 0x241531, roughness: 0.75, metalness: 0.1 })
+    );
+    platform.position.y = 0.14; g.add(platform);
+
+    const car = buildCar(st.stage);
+    g.add(car.group);
+
+    let updaters = [];
+    let focus = car.group; // what scales/lifts on hover+select
+
+    if (st.id === "body") {
+      const armA = buildArm(AMBER); armA.group.position.set(-1.15, 0, 0.55); armA.group.rotation.y = 0.5;
+      const armB = buildArm(AMBER); armB.group.position.set(1.15, 0, -0.35); armB.group.rotation.y = -2.4;
+      g.add(armA.group, armB.group);
+      const sparkA = new THREE.PointLight(0xfef8e0, 0, 2.2); armA.tip.add(sparkA);
+      const sparkB = new THREE.PointLight(0xfef8e0, 0, 2.2); armB.tip.add(sparkB);
+      updaters.push((dt, t) => {
+        armA.pivot.rotation.z = -0.35 + Math.sin(t * 1.6) * 0.22;
+        armA.pivot.rotation.x = 0.15 + Math.sin(t * 1.1) * 0.08;
+        armB.pivot.rotation.z = 0.35 + Math.sin(t * 1.6 + 1.4) * 0.22;
+        armB.pivot.rotation.x = 0.15 + Math.sin(t * 1.1 + 1.4) * 0.08;
+        const flick = Math.max(0, Math.sin(t * 9)) * Math.max(0, Math.sin(t * 5.3 + 1));
+        sparkA.intensity = flick * 1.6;
+        sparkB.intensity = Math.max(0, Math.sin(t * 9 + 2)) * Math.max(0, Math.sin(t * 4.7 + 0.4)) * 1.6;
+      });
+    }
+
+    if (st.id === "paint") {
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0xb08a9e, transparent: true, opacity: 0.16, side: THREE.DoubleSide });
+      const wallL = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 2.4), wallMat);
+      wallL.position.set(-1.85, 1.3, 0); wallL.rotation.y = Math.PI / 2; g.add(wallL);
+      const wallR = wallL.clone(); wallR.position.x = 1.85; g.add(wallR);
+      const wallBack = new THREE.Mesh(new THREE.PlaneGeometry(3.7, 2.4), wallMat.clone());
+      wallBack.position.set(0, 1.3, -1.9); g.add(wallBack);
+      const lightBar = new THREE.Mesh(
+        new THREE.BoxGeometry(3.2, 0.1, 0.5),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 })
+      );
+      lightBar.position.set(0, 2.55, 0); g.add(lightBar);
+
+      const sprayArm = buildArm(0xd9a9c5);
+      sprayArm.group.position.set(0, 0, 1.6); sprayArm.group.rotation.y = Math.PI;
+      g.add(sprayArm.group);
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(0.3, 0.55, 14, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0xf5dce8, transparent: true, opacity: 0.28, side: THREE.DoubleSide })
+      );
+      cone.rotation.x = Math.PI / 2; cone.position.y = -0.4;
+      sprayArm.tip.add(cone);
+
+      updaters.push((dt, t) => {
+        sprayArm.pivot.rotation.z = Math.sin(t * 1.3) * 0.5;
+        cone.material.opacity = 0.18 + Math.max(0, Math.sin(t * 3)) * 0.22;
+        cone.scale.setScalar(0.9 + Math.sin(t * 3) * 0.15);
+        lightBar.material.emissiveIntensity = 0.75 + Math.sin(t * 2) * 0.15;
+      });
+    }
+
+    if (st.id === "torque") {
+      const rig = new THREE.Group();
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.2, 8), new THREE.MeshStandardMaterial({ color: 0x3a2440 }));
+      pole.position.set(0, 1.1, -1.5); rig.add(pole);
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 1.6), new THREE.MeshStandardMaterial({ color: 0x3a2440 }));
+      beam.position.set(0, 2.15, -0.7); rig.add(beam);
+      const claw = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.3), new THREE.MeshStandardMaterial({ color: AMBER, emissive: AMBER, emissiveIntensity: 0.3 }));
+      claw.position.set(0, 1.55, 0.1); rig.add(claw);
+      g.add(rig);
+
+      const p1 = buildPerson(0xe0c3d3); p1.position.set(-1.35, 0, 0.6); p1.rotation.y = 0.6; g.add(p1);
+      const p2 = buildPerson(0xd0a8c0); p2.position.set(1.35, 0, -0.3); p2.rotation.y = -0.8; g.add(p2);
+
+      updaters.push((dt, t) => {
+        claw.position.y = 1.55 + Math.sin(t * 1.4) * 0.18;
+        if (car.looseWheel) car.looseWheel.position.y = 1.55 + Math.sin(t * 1.4) * 0.18 - 0.05;
+        p1.position.y = Math.max(0, Math.sin(t * 1.7)) * 0.03;
+        p2.position.y = Math.max(0, Math.sin(t * 1.7 + 1.1)) * 0.03;
+      });
+    }
+
+    if (st.id === "qc") {
+      const panelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.55, transparent: true, opacity: 0.85 });
+      [-1.7, -0.85, 0.85, 1.7].forEach((px) => {
+        const lp = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.0, 0.16), panelMat.clone());
+        lp.position.set(px, 1.1, -1.6); g.add(lp);
+        lp.userData.baseX = px;
+      });
+      const screenStand = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.3, 0.08), new THREE.MeshStandardMaterial({ color: 0x2a1830 }));
+      screenStand.position.set(1.85, 0.65, 0.6); g.add(screenStand);
+      const screen = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.85, 0.62),
+        new THREE.MeshBasicMaterial({ map: heatmapTex })
+      );
+      screen.position.set(1.85, 1.55, 0.6); screen.rotation.y = -0.5;
+      g.add(screen);
+
+      const inspector = buildPerson(0xe0c3d3);
+      inspector.position.set(1.85, 0, 1.35); inspector.rotation.y = -2.2; g.add(inspector);
+      const tablet = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.24), new THREE.MeshBasicMaterial({ color: 0x241531 }));
+      tablet.position.set(1.65, 0.55, 1.2); tablet.rotation.y = -2.2; g.add(tablet);
+
+      updaters.push((dt, t) => {
+        g.children.forEach((c) => {
+          if (c.userData && c.userData.baseX !== undefined) {
+            c.material.emissiveIntensity = 0.4 + Math.sin(t * 2.2 + c.userData.baseX) * 0.2;
+          }
+        });
+      });
+    }
+
+    // status lamp + halo
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 14), new THREE.MeshBasicMaterial({ color: STATUS_COLOR[st.status] }));
+    lamp.position.set(0, 2.85, 0); g.add(lamp);
+    const halo = new THREE.Mesh(new THREE.SphereGeometry(0.32, 14, 14), new THREE.MeshBasicMaterial({ color: STATUS_COLOR[st.status], transparent: true, opacity: 0.18 }));
+    halo.position.copy(lamp.position); g.add(halo);
+
+    // automation ring
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(2.0, 0.045, 8, 40, Math.PI * 2 * (AUTO_RING[st.automation] || 0.5)),
+      new THREE.MeshBasicMaterial({ color: AMBER, transparent: true, opacity: 0.55 })
+    );
+    ring.rotation.x = Math.PI / 2; ring.position.y = 0.3; g.add(ring);
+
+    // upstream-risk ring — only drawn when a station earlier on the line is
+    // flagged worse than this station's own status, so a healthy station can
+    // still visibly show "the real issue traces back upstream".
+    let upstreamRing = null, upstreamFlagSprite = null;
+    if (st.upstreamFlag) {
+      upstreamRing = makeDashedRing(2.55, STATUS_COLOR[st.upstreamRisk]);
+      upstreamRing.rotation.x = Math.PI / 2; upstreamRing.position.y = 0.36;
+      g.add(upstreamRing);
+
+      const flagMat = new THREE.SpriteMaterial({ map: makeFlagTexture(STATUS_HEX[st.upstreamRisk]), transparent: true });
+      upstreamFlagSprite = new THREE.Sprite(flagMat);
+      upstreamFlagSprite.scale.set(0.42, 0.42, 0.42);
+      upstreamFlagSprite.position.set(0.62, 3.55, 0);
+      g.add(upstreamFlagSprite);
+    }
+
+    // icon + label sprites
+    const iconMat = new THREE.SpriteMaterial({ map: makeIconTexture(st.icon, STATUS_HEX[st.status]), transparent: true });
+    const icon = new THREE.Sprite(iconMat);
+    icon.scale.set(0.7, 0.7, 0.7); icon.position.set(0, 3.4, 0); g.add(icon);
+
+    const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeLabelTexture(st.name, st.sub), transparent: true }));
+    label.scale.set(3.1, 0.58, 1); label.position.set(0, -0.55, 0); g.add(label);
+
+    const hit = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.2, 2.2, 4.0, 12),
+      new THREE.MeshBasicMaterial({ visible: false })
+    );
+    hit.position.y = 1.6; hit.userData.stationId = st.id; g.add(hit);
+
+    stationMeshes.push({
+      id: st.id, data: st, group: g, hit, lamp, halo, ring, focus, upstreamRing,
+      baseY: focus.position.y, pulse: Math.random() * Math.PI * 2, updaters,
+    });
+  });
+
+  // flow particles
+  const N = 46, START = -13, END = 13;
+  const pPos = new Float32Array(N * 3);
+  const prog = new Float32Array(N);
+  for (let i = 0; i < N; i++) prog[i] = i / N;
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
+  const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({
+    color: AMBER, size: 0.16, transparent: true, opacity: 0.85,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  world.add(particles);
+
+  // -------------------------------------------------------------- controls
+  const target = new THREE.Vector3(0, 1.2, 0);
+  let radius = 17, theta = 0.78, phi = 1.05;
+  let dragging = false, lastX = 0, lastY = 0;
+  let idleSpin = true, idleTimer = null;
+
+  function armIdle() {
+    idleSpin = false;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { idleSpin = true; }, 3200);
+  }
+
+  function updateCamera() {
+    const sp = Math.max(0.35, Math.min(Math.PI - 0.2, phi));
+    camera.position.set(
+      target.x + radius * Math.sin(sp) * Math.sin(theta),
+      target.y + radius * Math.cos(sp),
+      target.z + radius * Math.sin(sp) * Math.cos(theta)
+    );
+    camera.lookAt(target);
+  }
+  updateCamera();
+
+  canvas.addEventListener("pointerdown", (e) => {
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    canvas.classList.add("dragging"); armIdle();
+    canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener("pointerup", () => { dragging = false; canvas.classList.remove("dragging"); });
+  canvas.addEventListener("pointercancel", () => { dragging = false; canvas.classList.remove("dragging"); });
+  canvas.addEventListener("pointermove", (e) => {
+    if (dragging) {
+      theta -= (e.clientX - lastX) * 0.0065;
+      phi -= (e.clientY - lastY) * 0.0065;
+      lastX = e.clientX; lastY = e.clientY;
+      armIdle();
+    }
+    const r = canvas.getBoundingClientRect();
+    pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+    pointerScreen.x = e.clientX; pointerScreen.y = e.clientY;
+  });
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    radius = Math.max(8, Math.min(30, radius + e.deltaY * 0.015));
+    armIdle();
+  }, { passive: false });
+
+  let touchDist = null;
+  canvas.addEventListener("touchmove", (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const d = Math.hypot(dx, dy);
+      if (touchDist != null) radius = Math.max(8, Math.min(30, radius - (d - touchDist) * 0.02));
+      touchDist = d; armIdle();
+    }
+  }, { passive: true });
+  canvas.addEventListener("touchend", () => { touchDist = null; });
+
+  // ----------------------------------------------------------- interaction
+  const ray = new THREE.Raycaster();
+  const pointer = new THREE.Vector2(-2, -2);
+  const pointerScreen = { x: 0, y: 0 };
+  let hovered = null, selected = null;
+
+  const tip = document.getElementById("tip");
+  const panel = document.getElementById("panel");
+  const panelBody = document.getElementById("panelBody");
+  const hint = document.getElementById("hint");
+  let hintFaded = false;
+
+  function fmtNum(n) { return n.toLocaleString("en-IN"); }
+
+  function showTip(st) {
+    let html =
+      '<div class="name">' + st.name + '</div>' +
+      '<div class="sub">' + st.sub + '</div>' +
+      '<div class="row"><span>Speed</span><b>' + st.speed + ' u/hr</b></div>' +
+      '<div class="row"><span>Cost / unit</span><b>\u20B9' + fmtNum(st.cost) + '</b></div>' +
+      '<div class="row"><span>Downtime</span><b>' + st.downtime + '%</b></div>';
+    if (st.upstreamFlag) {
+      html += '<div class="row" style="margin-top:5px;padding-top:6px;border-top:1px solid var(--border)">' +
+        '<span>\u26A0 Upstream risk</span><b style="color:' + STATUS_HEX[st.upstreamRisk] + '">' +
+        (st.upstreamRisk === "critical" ? "Bottleneck at " : "Watch at ") + shortName(st.upstreamSource).replace("Station ", "St. ") +
+        '</b></div>';
+    }
+    tip.innerHTML = html;
+    tip.classList.add("show");
+  }
+  function hideTip() { tip.classList.remove("show"); }
+
+  function openPanel(st) {
+    selected = st.id;
+    const statusLabel = st.status === "healthy" ? "Healthy" : st.status === "warning" ? "Watch" : "Bottleneck";
+    let badges = '<span class="badge" style="background:' + STATUS_HEX[st.status] + '22;color:' + STATUS_HEX[st.status] + '">' + statusLabel + ' · own equipment</span>';
+    let upstreamNote = "";
+    if (st.upstreamFlag) {
+      const riskLabel = st.upstreamRisk === "critical" ? "Bottleneck upstream" : "Elevated risk upstream";
+      badges += ' <span class="badge" style="background:' + STATUS_HEX[st.upstreamRisk] + '22;color:' + STATUS_HEX[st.upstreamRisk] + '">\u26A0 ' + riskLabel + '</span>';
+      const srcShort = shortName(st.upstreamSource);
+      upstreamNote =
+        '<div class="note" style="border-color:' + STATUS_HEX[st.upstreamRisk] + '55">' +
+        '<b style="color:' + STATUS_HEX[st.upstreamRisk] + '">Traces back to ' + srcShort + '.</b> ' +
+        "This station's own equipment reads healthy, but " + (st.upstreamRisk === "critical" ? "a bottleneck" : "a flagged issue") +
+        ' earlier on the line means what arrives here is already throughput- and quality-limited by ' + srcShort + " — exactly the kind of defect that surfaces late and traces back to where it actually began." +
+        '</div>';
+    }
+    panelBody.innerHTML =
+      badges +
+      '<h2 style="margin-top:10px">' + st.name + '</h2>' +
+      '<div class="sub">' + st.sub + ' · ' + st.automation + '</div>' +
+      '<div class="note">' + st.note + '</div>' +
+      upstreamNote +
+      '<div class="metric-grid">' +
+        '<div class="metric"><div class="k">Speed</div><div class="v">' + st.speed + '<span class="u">u/hr</span></div>' +
+          '<div class="bar"><i style="width:' + pct(st.speed, "speed", false) + '%"></i></div></div>' +
+        '<div class="metric"><div class="k">Cost / unit</div><div class="v">\u20B9' + fmtNum(st.cost) + '</div>' +
+          '<div class="bar"><i style="width:' + pct(st.cost, "cost", true) + '%"></i></div></div>' +
+        '<div class="metric"><div class="k">Downtime</div><div class="v">' + st.downtime + '<span class="u">%</span></div>' +
+          '<div class="bar"><i style="width:' + pct(st.downtime, "downtime", true) + '%"></i></div></div>' +
+        '<div class="metric"><div class="k">Defect rate</div><div class="v">' + st.defect + '<span class="u">%</span></div>' +
+          '<div class="bar"><i style="width:' + pct(st.defect, "defect", true) + '%"></i></div></div>' +
+      '</div>' +
+      '<div class="section-label">Reading the bars</div>' +
+      '<div class="note" style="margin-bottom:0">Bar fill shows how this station compares to the other three on the line — fuller is better (higher speed, lower cost/downtime/defects).</div>';
+    panel.classList.add("open");
+  }
+  document.getElementById("panelClose").addEventListener("click", () => {
+    panel.classList.remove("open"); selected = null;
+  });
+
+  canvas.addEventListener("click", () => {
+    if (hovered) openPanel(hovered.data);
+  });
+
+  function resize() {
+    const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+
+  let last = performance.now(), t = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now; t += dt;
+    resize();
+
+    if (idleSpin && !dragging) theta += dt * 0.05;
+    updateCamera();
+
+    ray.setFromCamera(pointer, camera);
+    const hit = ray.intersectObjects(stationMeshes.map((s) => s.hit), false)[0];
+    const found = hit ? stationMeshes.find((s) => s.hit === hit.object) : null;
+    if (found !== hovered) {
+      hovered = found;
+      canvas.style.cursor = hovered ? "pointer" : "grab";
+      if (!hintFaded) { hint.style.opacity = "0"; hintFaded = true; }
+    }
+    if (hovered) {
+      showTip(hovered.data);
+      tip.style.left = pointerScreen.x + "px";
+      tip.style.top = (pointerScreen.y - 14) + "px";
+    } else hideTip();
+
+    stationMeshes.forEach((s) => {
+      const urgent = s.data.status === "critical" ? 1 : s.data.status === "warning" ? 0.45 : 0;
+      s.pulse += dt * (1.6 + urgent * 3);
+      const beat = 1 + Math.sin(s.pulse) * (0.12 + urgent * 0.4);
+      s.halo.scale.setScalar(beat);
+      s.halo.material.opacity = 0.14 + urgent * 0.24;
+
+      const sel = s.id === selected || s.id === (hovered && hovered.id);
+      const targetY = s.baseY + (sel ? 0.12 : 0);
+      s.focus.position.y += (targetY - s.focus.position.y) * 0.12;
+      const sc = sel ? 1.05 : 1;
+      s.focus.scale.x += (sc - s.focus.scale.x) * 0.15;
+      s.focus.scale.z += (sc - s.focus.scale.z) * 0.15;
+
+      s.ring.material.opacity = 0.4 + Math.sin(t * 1.5 + s.pulse) * 0.15;
+
+      if (s.upstreamRing) {
+        s.upstreamRing.rotation.y += dt * 0.25;
+        const sevPulse = s.data.upstreamRisk === "critical" ? 3.2 : 1.8;
+        s.upstreamRing.material.opacity = 0.35 + Math.max(0, Math.sin(t * sevPulse)) * 0.4;
+      }
+
+      s.updaters.forEach((fn) => fn(dt, t));
+    });
+
+    const pos = particles.geometry.attributes.position.array;
+    for (let i = 0; i < N; i++) {
+      prog[i] += dt * 0.07;
+      if (prog[i] > 1) prog[i] -= 1;
+      const p = prog[i];
+      pos[i * 3] = START + (END - START) * p;
+      pos[i * 3 + 1] = 0.32 + Math.sin(p * 30 + t * 2) * 0.05;
+      pos[i * 3 + 2] = Math.sin(i * 12.9) * 0.35;
+    }
+    particles.geometry.attributes.position.needsUpdate = true;
+
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
